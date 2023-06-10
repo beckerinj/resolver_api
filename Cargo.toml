@@ -9,6 +9,7 @@ license = "GPL-3.0-or-later"
 
 [package]
 name = "resolver_api"
+description = "traits to structure request / response / resolver relationships"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
