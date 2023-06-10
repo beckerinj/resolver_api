@@ -1,6 +1,8 @@
 use anyhow::Context;
 use serde::{de::DeserializeOwned, Serialize};
 
+pub use resolver_api_derive as derive;
+
 #[async_trait::async_trait]
 pub trait HasResponse: Serialize + DeserializeOwned + std::fmt::Debug + Send + 'static {
     type Response: Serialize + DeserializeOwned + std::fmt::Debug;
