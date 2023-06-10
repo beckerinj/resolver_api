@@ -1,5 +1,6 @@
 [package]
 name = "resolver_api_derive"
+description = "derive macros for HasResponse and request resolver"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
