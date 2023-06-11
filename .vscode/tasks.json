@@ -28,7 +28,10 @@
 		{
 			"type": "cargo",
 			"command": "publish",
-			"label": "publish derive lib"
+			"label": "publish derive lib",
+			"options": {
+				"cwd": "./derive"
+			}
 		}
 	]
 }
