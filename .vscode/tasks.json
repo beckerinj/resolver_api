@@ -30,7 +30,7 @@
 			"command": "publish",
 			"label": "publish derive lib",
 			"options": {
-				"cwd": "./derive"
+				"cwd": "${workspaceFolder}/derive"
 			}
 		}
 	]
