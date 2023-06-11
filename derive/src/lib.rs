@@ -49,7 +49,7 @@ pub fn derive_resolver(input: TokenStream) -> TokenStream {
     .into()
 }
 
-#[proc_macro_derive(Response, attributes(response))]
+#[proc_macro_derive(Request, attributes(response))]
 pub fn has_response(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let req = input.ident;
