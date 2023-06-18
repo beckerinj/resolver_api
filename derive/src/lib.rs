@@ -4,10 +4,11 @@ use syn::{parse_macro_input, Data, DeriveInput, Type};
 
 #[proc_macro_derive(Resolver, attributes(resolver_target, to_string_resolver))]
 pub fn derive_resolver(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    let name = input.ident;
+    let DeriveInput {
+        ident, data, attrs, ..
+    } = parse_macro_input!(input as DeriveInput);
 
-    let (std_variant, to_string_variant) = if let Data::Enum(e) = input.data {
+    let (std_variant, to_string_variant) = if let Data::Enum(e) = data {
         let mut std_variants = Vec::new();
         let mut to_string_variants = Vec::new();
         for v in e.variants {
@@ -26,8 +27,7 @@ pub fn derive_resolver(input: TokenStream) -> TokenStream {
         panic!("expected request enum")
     };
 
-    let attr = input
-        .attrs
+    let attr = attrs
         .into_iter()
         .find(|attr| attr.path().is_ident("resolver_target"))
         .expect("did not find resolver_target attribute");
@@ -37,11 +37,12 @@ pub fn derive_resolver(input: TokenStream) -> TokenStream {
         .expect("should pass struct to implement resolve_request on, eg. AppState");
 
     quote! {
-        impl #target {
-            pub async fn resolve_request(&self, request: #name) -> anyhow::Result<String> {
+        #[async_trait::async_trait]
+        impl resolver_api::Resolver<#ident> for #target {
+            async fn resolve_request(&self, request: #ident) -> anyhow::Result<String> {
                 match request {
-                    #(#name::#std_variant(req) => self.resolve_response(req).await,)*
-                    #(#name::#to_string_variant(req) => self.resolve_to_string(req).await,)*
+                    #(#ident::#std_variant(req) => self.resolve_response(req).await,)*
+                    #(#ident::#to_string_variant(req) => self.resolve_to_string(req).await,)*
                 }
             }
         }
