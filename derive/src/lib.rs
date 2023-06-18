@@ -2,7 +2,10 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, Data, DeriveInput, Type};
 
-#[proc_macro_derive(Resolver, attributes(resolver_target, to_string_resolver))]
+#[proc_macro_derive(
+    Resolver,
+    attributes(resolver_target, to_string_resolver, resolver_args)
+)]
 pub fn derive_resolver(input: TokenStream) -> TokenStream {
     let DeriveInput {
         ident, data, attrs, ..
@@ -27,22 +30,33 @@ pub fn derive_resolver(input: TokenStream) -> TokenStream {
         panic!("expected request enum")
     };
 
-    let attr = attrs
-        .into_iter()
+    let target_attr = attrs
+        .iter()
         .find(|attr| attr.path().is_ident("resolver_target"))
         .expect("did not find resolver_target attribute");
 
-    let target: Type = attr
+    let target: Type = target_attr
         .parse_args()
         .expect("should pass struct to implement resolve_request on, eg. AppState");
 
+    let args_attr = attrs
+        .iter()
+        .find(|attr| attr.path().is_ident("resolver_args"));
+
+    let args: proc_macro2::TokenStream = match args_attr {
+        Some(args) => args
+            .parse_args()
+            .expect("should pass args type to resolver_args attr, or remove to default to ()"),
+        None => quote!(()),
+    };
+
     quote! {
         #[async_trait::async_trait]
-        impl resolver_api::Resolver<#ident> for #target {
-            async fn resolve_request(&self, request: #ident) -> anyhow::Result<String> {
+        impl resolver_api::Resolver<#ident, #args> for #target {
+            async fn resolve_request(&self, request: #ident, args: #args) -> anyhow::Result<String> {
                 match request {
-                    #(#ident::#std_variant(req) => self.resolve_response(req).await,)*
-                    #(#ident::#to_string_variant(req) => self.resolve_to_string(req).await,)*
+                    #(#ident::#std_variant(req) => self.resolve_response(req, args).await,)*
+                    #(#ident::#to_string_variant(req) => self.resolve_to_string(req, args).await,)*
                 }
             }
         }
