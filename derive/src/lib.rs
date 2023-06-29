@@ -83,6 +83,9 @@ pub fn has_response(input: TokenStream) -> TokenStream {
             fn req_type() -> &'static str {
                 stringify!(#req)
             }
+            fn res_type() -> &'static str {
+                stringify!(#res)
+            }
         }
     }
     .into()

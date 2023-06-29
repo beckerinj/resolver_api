@@ -8,6 +8,7 @@ pub use resolver_api_derive as derive;
 pub trait HasResponse: Serialize + DeserializeOwned + std::fmt::Debug + Send + 'static {
     type Response: Serialize + DeserializeOwned + std::fmt::Debug;
     fn req_type() -> &'static str;
+    fn res_type() -> &'static str;
 }
 
 #[async_trait]
