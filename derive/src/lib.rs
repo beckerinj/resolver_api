@@ -11,21 +11,24 @@ pub fn derive_resolver(input: TokenStream) -> TokenStream {
         ident, data, attrs, ..
     } = parse_macro_input!(input as DeriveInput);
 
-    let (std_variant, to_string_variant) = if let Data::Enum(e) = data {
+    let (std_variant, to_string_variant, req_types) = if let Data::Enum(e) = data {
         let mut std_variants = Vec::new();
         let mut to_string_variants = Vec::new();
+        let mut req_types = Vec::new();
         for v in e.variants {
+            let v_ident = v.ident;
+            req_types.push(quote!(#ident::#v_ident(_) => stringify!(#v_ident)));
             let use_to_string = v
                 .attrs
                 .iter()
                 .any(|a| a.path().is_ident("to_string_resolver"));
             if use_to_string {
-                to_string_variants.push(v.ident);
+                to_string_variants.push(v_ident);
             } else {
-                std_variants.push(v.ident);
+                std_variants.push(v_ident);
             }
         }
-        (std_variants, to_string_variants)
+        (std_variants, to_string_variants, req_types)
     } else {
         panic!("expected request enum")
     };
@@ -57,6 +60,13 @@ pub fn derive_resolver(input: TokenStream) -> TokenStream {
                 match request {
                     #(#ident::#std_variant(req) => self.resolve_response(req, args).await,)*
                     #(#ident::#to_string_variant(req) => self.resolve_to_string(req, args).await,)*
+                }
+            }
+        }
+        impl #ident {
+            pub fn req_type(&self) -> &'static str {
+                match self {
+                    #(#req_types,)*
                 }
             }
         }
