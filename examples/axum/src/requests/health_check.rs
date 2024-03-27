@@ -13,7 +13,7 @@ pub struct HealthCheckResponse {}
 
 #[async_trait]
 impl Resolve<HealthCheck> for State {
-    async fn resolve(&self, _: HealthCheck, _: ()) -> anyhow::Result<HealthCheckResponse> {
-        Ok(HealthCheckResponse {})
-    }
+  async fn resolve(&self, _: HealthCheck, _: ()) -> anyhow::Result<HealthCheckResponse> {
+    Ok(HealthCheckResponse {})
+  }
 }

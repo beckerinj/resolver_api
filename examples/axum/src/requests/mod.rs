@@ -11,6 +11,6 @@ mod health_check;
 #[derive(Deserialize, Resolver)]
 #[resolver_target(State)]
 pub enum Request {
-    HealthCheck(HealthCheck),
-    GetNum(GetNum),
+  HealthCheck(HealthCheck),
+  GetNum(GetNum),
 }
