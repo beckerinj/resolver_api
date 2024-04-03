@@ -54,9 +54,11 @@ pub fn derive_resolver(input: TokenStream) -> TokenStream {
   };
 
   quote! {
-    #[async_trait::async_trait]
     impl resolver_api::Resolver<#ident, #args> for #target {
-      async fn resolve_request(&self, request: #ident, args: #args) -> anyhow::Result<String> {
+      async fn resolve_request<'a>(&'a self, request: #ident, args: #args) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'a>
+        where
+          Self: Sync + 'a
+      {
         match request {
           #(#ident::#std_variant(req) => self.resolve_response(req, args).await,)*
           #(#ident::#to_string_variant(req) => self.resolve_to_string(req, args).await,)*
