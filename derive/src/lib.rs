@@ -55,14 +55,17 @@ pub fn derive_resolver(input: TokenStream) -> TokenStream {
 
   quote! {
     impl resolver_api::Resolver<#ident, #args> for #target {
-      async fn resolve_request<'a>(&'a self, request: #ident, args: #args) -> Pin<Box<dyn Future<Output = anyhow::Result<String>> + Send + 'a>
+      fn resolve_request<'a, 'async_trait>(&'a self, request: #ident, args: #args) -> std::pin::Pin<std::boxed::Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'async_trait>>
         where
-          Self: Sync + 'a
+          'a: 'async_trait,
+          Self: 'async_trait,
       {
-        match request {
-          #(#ident::#std_variant(req) => self.resolve_response(req, args).await,)*
-          #(#ident::#to_string_variant(req) => self.resolve_to_string(req, args).await,)*
-        }
+        Box::pin(async move {
+          match request {
+            #(#ident::#std_variant(req) => self.resolve_response(req, args).await,)*
+            #(#ident::#to_string_variant(req) => self.resolve_to_string(req, args).await,)*
+          }
+        })
       }
     }
     impl #ident {
