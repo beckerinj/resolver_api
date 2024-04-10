@@ -4,7 +4,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Type};
 
 #[proc_macro_derive(
   Resolver,
-  attributes(resolver_target, to_string_resolver, resolver_args)
+  attributes(resolver_target, resolver_error, to_string_resolver, resolver_args)
 )]
 pub fn derive_resolver(input: TokenStream) -> TokenStream {
   let DeriveInput {
@@ -42,6 +42,12 @@ pub fn derive_resolver(input: TokenStream) -> TokenStream {
     .parse_args()
     .expect("should pass struct to implement resolve_request on, eg. AppState");
 
+  let error = attrs
+    .iter()
+    .find(|attr| attr.path().is_ident("resolver_error"))
+    .and_then(|attr| attr.parse_args().ok())
+    .unwrap_or(quote!(anyhow::Error));
+
   let args_attr = attrs
     .iter()
     .find(|attr| attr.path().is_ident("resolver_args"));
@@ -54,8 +60,9 @@ pub fn derive_resolver(input: TokenStream) -> TokenStream {
   };
 
   quote! {
-    impl resolver_api::Resolver<#ident, #args> for #target {
-      fn resolve_request<'a, 'async_trait>(&'a self, request: #ident, args: #args) -> std::pin::Pin<std::boxed::Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'async_trait>>
+    impl resolver_api::Resolver<#ident, #args, #error> for #target {
+      fn resolve_request<'a, 'async_trait>(&'a self, request: #ident, args: #args)
+        -> std::pin::Pin<std::boxed::Box<dyn std::future::Future<Output = Result<String, resolver_api::Error<#error>>> + Send + 'async_trait>>
         where
           'a: 'async_trait,
           Self: 'async_trait,
@@ -63,7 +70,7 @@ pub fn derive_resolver(input: TokenStream) -> TokenStream {
         Box::pin(async move {
           match request {
             #(#ident::#std_variant(req) => self.resolve_response(req, args).await,)*
-            #(#ident::#to_string_variant(req) => self.resolve_to_string(req, args).await,)*
+            #(#ident::#to_string_variant(req) => self.resolve_to_string(req, args).await.map_err(resolver_api::Error::Inner),)*
           }
         })
       }
