@@ -7,6 +7,6 @@ pub enum Error<Inner: std::fmt::Debug> {
   Serialization(#[from] serde_json::Error),
 
   /// This passes through the inner error
-  #[error("inner error: {0:?}")]
+  #[error("inner error: {0:#}")]
   Inner(Inner),
 }
