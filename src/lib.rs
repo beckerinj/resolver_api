@@ -1,4 +1,5 @@
-use async_trait::async_trait;
+use std::future::Future;
+
 use serde::{de::DeserializeOwned, Serialize};
 
 pub use resolver_api_derive as derive;
@@ -7,29 +8,57 @@ mod error;
 
 pub use error::Error;
 
-pub trait HasResponse: Serialize + DeserializeOwned + std::fmt::Debug + Send + 'static {
+/// This trait is implemented on all Request structs.
+/// It defines an associated response type for the Request.
+pub trait HasResponse: Serialize + DeserializeOwned + std::fmt::Debug {
   type Response: Serialize + DeserializeOwned + std::fmt::Debug;
   fn req_type() -> &'static str;
   fn res_type() -> &'static str;
 }
 
-#[async_trait]
-pub trait Resolve<Req: HasResponse, Args: Send + 'static = (), Err: std::fmt::Debug = anyhow::Error>
+/// This trait is implemented on some State struct for all Request structs.
+/// It defines how State resolves the response.
+pub trait Resolve<
+  Req: HasResponse + Send + Sync,
+  Args: Send + Sync = (),
+  Err: std::fmt::Debug = anyhow::Error,
+> where
+  Self: Send + Sync,
 {
-  async fn resolve(&self, req: Req, args: Args) -> Result<Req::Response, Err>;
-  async fn resolve_response(&self, req: Req, args: Args) -> Result<String, Error<Err>> {
-    let res = self.resolve(req, args).await.map_err(Error::Inner)?;
-    let res = serde_json::to_string(&res).map_err(Error::Serialization)?;
-    Ok(res)
+  fn resolve(
+    &self,
+    req: Req,
+    args: Args,
+  ) -> impl Future<Output = Result<Req::Response, Err>> + Send + Sync;
+
+  fn resolve_response(
+    &self,
+    req: Req,
+    args: Args,
+  ) -> impl Future<Output = Result<String, Error<Err>>> + Send + Sync {
+    async {
+      let res = self.resolve(req, args).await.map_err(Error::Inner)?;
+      let res = serde_json::to_string(&res).map_err(Error::Serialization)?;
+      Ok(res)
+    }
   }
 }
 
-#[async_trait]
+/// Alternate trait to Resolve which skips auto serialization,
+/// and allows the developer to return an already serialized response.
 pub trait ResolveToString<Req: HasResponse, Args = (), Err: std::fmt::Debug = anyhow::Error> {
-  async fn resolve_to_string(&self, req: Req, args: Args) -> Result<String, Err>;
+  fn resolve_to_string(
+    &self,
+    req: Req,
+    args: Args,
+  ) -> impl Future<Output = Result<String, Err>> + Send + Sync;
 }
 
-#[async_trait]
+/// This trait is defined on master request enums using the [Resolver][derive::Resolver] macro.
 pub trait Resolver<ReqEnum, Args = (), Err: std::fmt::Debug = anyhow::Error> {
-  async fn resolve_request(&self, request: ReqEnum, args: Args) -> Result<String, Error<Err>>;
+  fn resolve_request(
+    &self,
+    request: ReqEnum,
+    args: Args,
+  ) -> impl Future<Output = Result<String, Error<Err>>> + Send + Sync;
 }

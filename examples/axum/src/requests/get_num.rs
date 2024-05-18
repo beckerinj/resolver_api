@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use resolver_api::{derive::Request, Resolve};
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +12,6 @@ pub struct GetNumResponse {
   pub num: u16,
 }
 
-#[async_trait]
 impl Resolve<GetNum> for State {
   async fn resolve(&self, _: GetNum, _: ()) -> anyhow::Result<GetNumResponse> {
     Ok(GetNumResponse { num: self.num })

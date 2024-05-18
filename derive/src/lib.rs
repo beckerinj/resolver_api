@@ -61,18 +61,18 @@ pub fn derive_resolver(input: TokenStream) -> TokenStream {
 
   quote! {
     impl resolver_api::Resolver<#ident, #args, #error> for #target {
-      fn resolve_request<'a, 'async_trait>(&'a self, request: #ident, args: #args)
-        -> std::pin::Pin<std::boxed::Box<dyn std::future::Future<Output = Result<String, resolver_api::Error<#error>>> + Send + 'async_trait>>
-        where
-          'a: 'async_trait,
-          Self: 'async_trait,
+      async fn resolve_request(&self, request: #ident, args: #args)
+        -> Result<String, resolver_api::Error<#error>>
       {
-        Box::pin(async move {
-          match request {
-            #(#ident::#std_variant(req) => self.resolve_response(req, args).await,)*
-            #(#ident::#to_string_variant(req) => self.resolve_to_string(req, args).await.map_err(resolver_api::Error::Inner),)*
-          }
-        })
+        match request {
+          #(#ident::#std_variant(req) => 
+            <#target as resolver_api::Resolve<_, _, _>>::resolve_response(self, req, args)
+              .await,)*
+          #(#ident::#to_string_variant(req) => 
+            <#target as resolver_api::ResolveToString<_, _, _>>::resolve_to_string(self, req, args)
+              .await
+              .map_err(resolver_api::Error::Inner),)*
+        }
       }
     }
     impl #ident {

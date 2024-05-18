@@ -2,7 +2,7 @@
 members = ["derive", "examples/*"]
 
 [workspace.package]
-version = "0.1.9"
+version = "1.0.0"
 edition = "2021"
 authors = ["mbecker20 <becker.maxh@gmail.com>"]
 license = "GPL-3.0-or-later"
@@ -20,9 +20,9 @@ repository.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-resolver_api_derive = "0.1.8"
-serde = { version = "1.0.197", features = ["derive"] }
-serde_json = "1.0.115"
-async-trait = "0.1.79"
-anyhow = "1.0.81"
-thiserror = "1.0.58"
+# resolver_api_derive = "0.1.8"
+resolver_api_derive = { path = "derive" }
+serde = { version = "1.0.202", features = ["derive"] }
+serde_json = "1.0.117"
+anyhow = "1.0.85"
+thiserror = "1.0.61"

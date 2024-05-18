@@ -1,9 +1,8 @@
-use std::{net::SocketAddr, str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 use anyhow::Context;
-use axum::{
-  headers::ContentType, http::StatusCode, routing::post, Extension, Json, Router, TypedHeader,
-};
+use axum::{http::StatusCode, routing::post, Extension, Json, Router};
+use axum_extra::{headers::ContentType, TypedHeader};
 use requests::Request;
 use resolver_api::Resolver;
 
@@ -32,10 +31,11 @@ async fn main() -> anyhow::Result<()> {
     )
     .layer(Extension(Arc::new(state)));
 
-  axum::Server::bind(&SocketAddr::from_str("127.0.0.1:5555")?)
-    .serve(app.into_make_service())
+  let listener = tokio::net::TcpListener::bind("127.0.0.1:5555")
     .await
-    .context("server crashed")?;
+    .context("failed to bind to tcp listener")?;
+
+  axum::serve(listener, app).await.context("server crashed")?;
 
   Ok(())
 }
