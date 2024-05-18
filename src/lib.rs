@@ -19,8 +19,8 @@ pub trait HasResponse: Serialize + DeserializeOwned + std::fmt::Debug {
 /// This trait is implemented on some State struct for all Request structs.
 /// It defines how State resolves the response.
 pub trait Resolve<
-  Req: HasResponse + Send + Sync,
-  Args: Send + Sync = (),
+  Req: HasResponse + Send,
+  Args: Send = (),
   Err: std::fmt::Debug = anyhow::Error,
 > where
   Self: Send + Sync,
@@ -29,13 +29,13 @@ pub trait Resolve<
     &self,
     req: Req,
     args: Args,
-  ) -> impl Future<Output = Result<Req::Response, Err>> + Send + Sync;
+  ) -> impl Future<Output = Result<Req::Response, Err>> + Send;
 
   fn resolve_response(
     &self,
     req: Req,
     args: Args,
-  ) -> impl Future<Output = Result<String, Error<Err>>> + Send + Sync {
+  ) -> impl Future<Output = Result<String, Error<Err>>> + Send {
     async {
       let res = self.resolve(req, args).await.map_err(Error::Inner)?;
       let res = serde_json::to_string(&res).map_err(Error::Serialization)?;
@@ -51,7 +51,7 @@ pub trait ResolveToString<Req: HasResponse, Args = (), Err: std::fmt::Debug = an
     &self,
     req: Req,
     args: Args,
-  ) -> impl Future<Output = Result<String, Err>> + Send + Sync;
+  ) -> impl Future<Output = Result<String, Err>> + Send;
 }
 
 /// This trait is defined on master request enums using the [Resolver][derive::Resolver] macro.
@@ -60,5 +60,5 @@ pub trait Resolver<ReqEnum, Args = (), Err: std::fmt::Debug = anyhow::Error> {
     &self,
     request: ReqEnum,
     args: Args,
-  ) -> impl Future<Output = Result<String, Error<Err>>> + Send + Sync;
+  ) -> impl Future<Output = Result<String, Error<Err>>> + Send;
 }
