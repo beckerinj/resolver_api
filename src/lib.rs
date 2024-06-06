@@ -6,7 +6,7 @@ pub use resolver_api_derive as derive;
 
 mod error;
 
-pub use error::Error;
+pub use error::{into_anyhow_error, Error};
 
 /// This trait is implemented on all Request structs.
 /// It defines an associated response type for the Request.
@@ -18,11 +18,8 @@ pub trait HasResponse: Serialize + DeserializeOwned + std::fmt::Debug {
 
 /// This trait is implemented on some State struct for all Request structs.
 /// It defines how State resolves the response.
-pub trait Resolve<
-  Req: HasResponse + Send,
-  Args: Send = (),
-  Err: std::fmt::Debug = anyhow::Error,
-> where
+pub trait Resolve<Req: HasResponse + Send, Args: Send = (), Err: std::fmt::Debug = anyhow::Error>
+where
   Self: Send + Sync,
 {
   fn resolve(
