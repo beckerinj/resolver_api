@@ -28,14 +28,14 @@ fn impl_derive_resolve(input: DeriveInput) -> Result<TokenStream, syn::Error> {
     .transpose()?
     .unwrap_or_else(|| syn::parse_quote!(()));
 
-  let req = &input.ident;
+  let ident = &input.ident;
   let mut res = quote! {
-    impl resolver_api::HasResponse for #req {
+    impl resolver_api::HasResponse for #ident {
       type State = #state;
       type Response = #response;
 
       fn req_type() -> &'static str {
-        stringify!(#req)
+        stringify!(#ident)
       }
       fn res_type() -> &'static str {
         stringify!(#response)
@@ -49,7 +49,7 @@ fn impl_derive_resolve(input: DeriveInput) -> Result<TokenStream, syn::Error> {
     Data::Struct(_) => {}
     Data::Enum(e) => {
       // Enforce enum variants with single unnamed field
-      let idents = e
+      let variants = e
         .variants
         .into_iter()
         .map(|v| match v.fields {
@@ -65,10 +65,10 @@ fn impl_derive_resolve(input: DeriveInput) -> Result<TokenStream, syn::Error> {
         .collect::<Result<Vec<_>, _>>()?;
 
       let enum_res = quote! {
-        impl ::resolver_api::Resolve for #req {
+        impl ::resolver_api::Resolve for #ident {
           async fn resolve(self, state: &Self::State) -> Self::Response {
             match self {
-              #(#req::#idents(c) => {::core::convert::From::from(::resolver_api::Resolve::resolve(c, state).await)},)*
+              #(#ident::#variants(c) => {::core::convert::From::from(::resolver_api::Resolve::resolve(c, state).await)},)*
             }
           }
         }
