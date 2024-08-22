@@ -20,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
       "/",
       post(
         |state: Extension<Arc<State>>, Json(req): Json<Request>| async move {
-          req.resolve(&state).await
+          req.resolve(&state).await.0
         },
       ),
     )

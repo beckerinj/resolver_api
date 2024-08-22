@@ -1,7 +1,7 @@
+use axum::Json;
 use resolver_api::Resolve;
 use serde::{Deserialize, Serialize};
 
-use super::Json;
 use crate::State;
 
 #[derive(Deserialize, Debug, Resolve)]
