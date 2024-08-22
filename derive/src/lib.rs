@@ -20,12 +20,13 @@ fn impl_derive_resolve(input: DeriveInput) -> Result<TokenStream, syn::Error> {
     .ok_or_else(|| syn::Error::new(input.span(), "did not find `#[response]` attribute"))?;
   let response: Type = response_type.parse_args()?;
 
-  let state_type = input
+  let state = input
     .attrs
     .iter()
     .find(|attr| attr.path().is_ident("state"))
-    .ok_or_else(|| syn::Error::new(input.span(), "did not find `#[state]` attribute"))?;
-  let state: Type = state_type.parse_args()?;
+    .map(|state_type| state_type.parse_args::<Type>())
+    .transpose()?
+    .unwrap_or_else(|| syn::parse_quote!(()));
 
   let req = &input.ident;
   let mut res = quote! {

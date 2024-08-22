@@ -9,9 +9,7 @@ license.workspace = true
 
 [dependencies]
 resolver_api = { path = "../.." }
-resolver_api_derive = { path = "../../derive" }
 tokio = { version = "1.37.0", features = ["full"] }
 axum = { version = "0.7.5", features = ["json"] }
-axum-extra = { version = "0.9.3", features = ["typed-header"] }
 serde = { version = "1.0.202", features = ["derive"] }
 anyhow = "1.0.85"
