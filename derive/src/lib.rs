@@ -52,12 +52,10 @@ fn impl_derive_resolve(input: DeriveInput) -> Result<TokenStream, syn::Error> {
         .variants
         .into_iter()
         .map(|v| match v.fields {
-          syn::Fields::Unnamed(u) => {
-            if u.unnamed.len() != 1 {
-              return Err(syn::Error::new(u.unnamed.span(), "expected one enum field"));
-            }
-            Ok(v.ident)
-          }
+          syn::Fields::Unnamed(u) => match u.unnamed.len() {
+            1 => Ok(v.ident),
+            _ => Err(syn::Error::new(u.unnamed.span(), "expected one enum field")),
+          },
           v => Err(syn::Error::new(
             v.span(),
             "only unnamed enum fields are supported",
