@@ -22,7 +22,7 @@ where
 
 #[derive(Deserialize, Resolve)]
 #[response(Response)]
-#[state(State)]
+#[args(State)]
 pub enum Request {
   HealthCheck(HealthCheck),
   GetNum(GetNum),

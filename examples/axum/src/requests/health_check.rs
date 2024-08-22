@@ -6,7 +6,7 @@ use crate::State;
 
 #[derive(Deserialize, Debug, Resolve)]
 #[response(Json<HealthCheckResponse>)]
-#[state(State)]
+#[args(State)]
 pub struct HealthCheck {}
 
 #[derive(Serialize, Debug)]

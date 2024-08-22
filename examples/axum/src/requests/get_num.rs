@@ -6,7 +6,7 @@ use crate::State;
 
 #[derive(Deserialize, Debug, Resolve)]
 #[response(Json<GetNumResponse>)]
-#[state(State)]
+#[args(State)]
 pub struct GetNum {}
 
 #[derive(Serialize, Debug)]
@@ -15,7 +15,7 @@ pub struct GetNumResponse {
 }
 
 impl Resolve for GetNum {
-  async fn resolve(self, state: &State) -> Json<GetNumResponse> {
-    Json(GetNumResponse { num: state.num })
+  async fn resolve(self, args: &State) -> Json<GetNumResponse> {
+    Json(GetNumResponse { num: args.num })
   }
 }
