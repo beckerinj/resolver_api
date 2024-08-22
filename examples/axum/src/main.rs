@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use axum::{http::StatusCode, routing::post, Extension, Json, Router};
-use axum_extra::{headers::ContentType, TypedHeader};
+use axum::{routing::post, Extension, Json, Router};
 use requests::Request;
-use resolver_api::Resolver;
+use resolver_api::Resolve;
 
 mod requests;
 
@@ -21,11 +20,7 @@ async fn main() -> anyhow::Result<()> {
       "/",
       post(
         |state: Extension<Arc<State>>, Json(req): Json<Request>| async move {
-          let res = state
-            .resolve_request(req, ())
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#?}")))?;
-          Result::<_, (StatusCode, String)>::Ok((TypedHeader(ContentType::json()), res))
+          req.resolve(&state).await
         },
       ),
     )
