@@ -3,8 +3,6 @@ use serde::Deserialize;
 
 use crate::State;
 
-use self::{get_num::GetNum, health_check::HealthCheck};
-
 mod get_num;
 mod get_string;
 mod health_check;
@@ -24,6 +22,7 @@ where
 #[response(Response)]
 #[args(State)]
 pub enum Request {
-  HealthCheck(HealthCheck),
-  GetNum(GetNum),
+  HealthCheck(health_check::HealthCheck),
+  GetNum(get_num::GetNum),
+  GetString(get_string::GetString),
 }
