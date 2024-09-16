@@ -1,19 +1,32 @@
-use resolver_api_derive::Resolver;
+use resolver_api::Resolve;
 use serde::Deserialize;
 
 use crate::State;
 
-use self::{get_num::GetNum, health_check::HealthCheck, to_string::ToStringTest};
-
 mod get_num;
+mod get_string;
 mod health_check;
-mod to_string;
 
-#[derive(Deserialize, Resolver)]
-#[resolver_target(State)]
+pub struct Response {
+  pub response: axum::response::Response,
+}
+
+impl<T> From<T> for Response
+where
+  T: axum::response::IntoResponse,
+{
+  fn from(value: T) -> Self {
+    Response {
+      response: value.into_response(),
+    }
+  }
+}
+
+#[derive(Deserialize, Resolve)]
+#[response(Response)]
+#[args(State)]
 pub enum Request {
-  HealthCheck(HealthCheck),
-  GetNum(GetNum),
-  #[to_string_resolver]
-  ToStringTest(ToStringTest),
+  HealthCheck(health_check::HealthCheck),
+  GetNum(get_num::GetNum),
+  GetString(get_string::GetString),
 }

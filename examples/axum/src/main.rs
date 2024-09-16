@@ -1,31 +1,30 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use axum::{http::StatusCode, routing::post, Extension, Json, Router};
-use axum_extra::{headers::ContentType, TypedHeader};
+use axum::{routing::post, Extension, Json, Router};
 use requests::Request;
-use resolver_api::Resolver;
+use resolver_api::Resolve;
 
 mod requests;
 
 pub struct State {
   pub num: u16,
+  pub json_string: String,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-  let state = State { num: 43 };
+  let state = State {
+    num: 43,
+    json_string: String::from("{\"is_json\":true}"),
+  };
 
   let app = Router::new()
     .route(
       "/",
       post(
         |state: Extension<Arc<State>>, Json(req): Json<Request>| async move {
-          let res = state
-            .resolve_request(req, ())
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("{e:#?}")))?;
-          Result::<_, (StatusCode, String)>::Ok((TypedHeader(ContentType::json()), res))
+          req.resolve(&state).await.response
         },
       ),
     )

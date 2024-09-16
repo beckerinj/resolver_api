@@ -1,114 +1,86 @@
-use proc_macro::TokenStream;
+use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Data, DeriveInput, Type};
+use syn::{parse_macro_input, spanned::Spanned, Attribute, Data, DeriveInput, Type};
 
-#[proc_macro_derive(
-  Resolver,
-  attributes(resolver_target, resolver_error, to_string_resolver, resolver_args)
-)]
-pub fn derive_resolver(input: TokenStream) -> TokenStream {
-  let DeriveInput {
-    ident, data, attrs, ..
-  } = parse_macro_input!(input as DeriveInput);
-
-  let (std_variant, to_string_variant, req_types) = if let Data::Enum(e) = data {
-    let mut std_variants = Vec::new();
-    let mut to_string_variants = Vec::new();
-    let mut req_types = Vec::new();
-    for v in e.variants {
-      let v_ident = v.ident;
-      req_types.push(quote!(#ident::#v_ident(_) => stringify!(#v_ident)));
-      let use_to_string = v
-        .attrs
-        .iter()
-        .any(|a| a.path().is_ident("to_string_resolver"));
-      if use_to_string {
-        to_string_variants.push(v_ident);
-      } else {
-        std_variants.push(v_ident);
-      }
-    }
-    (std_variants, to_string_variants, req_types)
-  } else {
-    panic!("expected request enum")
-  };
-
-  let target_attr = attrs
-    .iter()
-    .find(|attr| attr.path().is_ident("resolver_target"))
-    .expect("did not find resolver_target attribute");
-
-  let target: Type = target_attr
-    .parse_args()
-    .expect("should pass struct to implement resolve_request on, eg. AppState");
-
-  let error = attrs
-    .iter()
-    .find(|attr| attr.path().is_ident("resolver_error"))
-    .and_then(|attr| attr.parse_args().ok())
-    .unwrap_or(quote!(anyhow::Error));
-
-  let args_attr = attrs
-    .iter()
-    .find(|attr| attr.path().is_ident("resolver_args"));
-
-  let args: proc_macro2::TokenStream = match args_attr {
-    Some(args) => args
-      .parse_args()
-      .expect("should pass args type to resolver_args attr, or remove to default to ()"),
-    None => quote!(()),
-  };
-
-  quote! {
-    impl resolver_api::Resolver<#ident, #args, #error> for #target {
-      async fn resolve_request(&self, request: #ident, args: #args)
-        -> Result<String, resolver_api::Error<#error>>
-      {
-        match request {
-          #(#ident::#std_variant(req) => 
-            <#target as resolver_api::Resolve<_, _, _>>::resolve_response(self, req, args)
-              .await,)*
-          #(#ident::#to_string_variant(req) => 
-            <#target as resolver_api::ResolveToString<_, _, _>>::resolve_to_string(self, req, args)
-              .await
-              .map_err(resolver_api::Error::Inner),)*
-        }
-      }
-    }
-    impl #ident {
-      pub fn req_type(&self) -> &'static str {
-        match self {
-          #(#req_types,)*
-        }
-      }
-    }
+#[proc_macro_derive(Resolve, attributes(response, args))]
+pub fn derive_resolve(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+  let input = parse_macro_input!(input as DeriveInput);
+  match impl_derive_resolve(input) {
+    Ok(stream) => stream,
+    Err(err) => err.into_compile_error(),
   }
   .into()
 }
 
-#[proc_macro_derive(Request, attributes(response))]
-pub fn has_response(input: TokenStream) -> TokenStream {
-  let input = parse_macro_input!(input as DeriveInput);
-  let req = input.ident;
-
-  let attr = input
+fn impl_derive_resolve(input: DeriveInput) -> Result<TokenStream, syn::Error> {
+  let response_type = input
     .attrs
-    .into_iter()
+    .iter()
     .find(|attr| attr.path().is_ident("response"))
-    .expect("did not find response attribute");
+    .ok_or_else(|| syn::Error::new(input.span(), "did not find `#[response]` attribute"))?;
+  let response_type: Type = response_type.parse_args()?;
 
-  let res: Type = attr.parse_args().expect("should pass response type");
+  let ident = &input.ident;
+  let mut res = quote! {
+    impl resolver_api::HasResponse for #ident {
+      type Response = #response_type;
 
-  quote! {
-    impl resolver_api::HasResponse for #req {
-      type Response = #res;
       fn req_type() -> &'static str {
-        stringify!(#req)
+        stringify!(#ident)
       }
       fn res_type() -> &'static str {
-        stringify!(#res)
+        stringify!(#response_type)
       }
     }
+  };
+
+  // If the derive proc_macro target is an enum then we automatically generate
+  // a `Resolve` implementation
+  match input.data {
+    Data::Struct(_) => {}
+    Data::Enum(e) => {
+      let args_type = extract_type_from_attr("args", &input.attrs)?;
+
+      // Enforce enum variants with single unnamed field
+      let variants = e
+        .variants
+        .into_iter()
+        .map(|v| match v.fields {
+          syn::Fields::Unnamed(u) => match u.unnamed.len() {
+            1 => Ok(v.ident),
+            _ => Err(syn::Error::new(u.unnamed.span(), "expected one enum field")),
+          },
+          v => Err(syn::Error::new(
+            v.span(),
+            "only unnamed enum fields are supported",
+          )),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+      let enum_res = quote! {
+        impl ::resolver_api::Resolve<#args_type> for #ident {
+          async fn resolve(self, args: &#args_type) -> Self::Response {
+            match self {
+              #(#ident::#variants(request) => {
+                ::core::convert::From::from(::resolver_api::Resolve::resolve(request, args).await)
+              },)*
+            }
+          }
+        }
+      };
+      res.extend(enum_res);
+    }
+    _ => return Err(syn::Error::new(input.span(), "unions are unsupported")),
   }
-  .into()
+  Ok(res)
+}
+
+fn extract_type_from_attr(ident: &str, attrs: &[Attribute]) -> Result<Type, syn::Error> {
+  let res = attrs
+    .iter()
+    .find(|attr| attr.path().is_ident(ident))
+    .map(|ty| ty.parse_args::<Type>())
+    .transpose()?
+    .unwrap_or_else(|| syn::parse_quote!(()));
+  Ok(res)
 }

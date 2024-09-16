@@ -1,17 +1,18 @@
-use resolver_api::{derive::Request, Resolve};
+use axum::Json;
+use resolver_api::Resolve;
 use serde::{Deserialize, Serialize};
 
 use crate::State;
 
-#[derive(Serialize, Deserialize, Debug, Request)]
-#[response(HealthCheckResponse)]
+#[derive(Deserialize, Debug, Resolve)]
+#[response(Json<HealthCheckResponse>)]
 pub struct HealthCheck {}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Debug)]
 pub struct HealthCheckResponse {}
 
-impl Resolve<HealthCheck> for State {
-  async fn resolve(&self, _: HealthCheck, _: ()) -> anyhow::Result<HealthCheckResponse> {
-    Ok(HealthCheckResponse {})
+impl Resolve<State> for HealthCheck {
+  async fn resolve(self, _: &State) -> Json<HealthCheckResponse> {
+    Json(HealthCheckResponse {})
   }
 }
