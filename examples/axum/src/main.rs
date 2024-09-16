@@ -9,18 +9,22 @@ mod requests;
 
 pub struct State {
   pub num: u16,
+  pub string: String,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-  let state = State { num: 43 };
+  let state = State {
+    num: 43,
+    string: String::from("rando"),
+  };
 
   let app = Router::new()
     .route(
       "/",
       post(
         |state: Extension<Arc<State>>, Json(req): Json<Request>| async move {
-          req.resolve(&state).await.0
+          req.resolve(&state).await.response
         },
       ),
     )

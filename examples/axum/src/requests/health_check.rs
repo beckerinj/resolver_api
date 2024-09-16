@@ -6,13 +6,12 @@ use crate::State;
 
 #[derive(Deserialize, Debug, Resolve)]
 #[response(Json<HealthCheckResponse>)]
-#[args(State)]
 pub struct HealthCheck {}
 
 #[derive(Serialize, Debug)]
 pub struct HealthCheckResponse {}
 
-impl Resolve for HealthCheck {
+impl Resolve<State> for HealthCheck {
   async fn resolve(self, _: &State) -> Json<HealthCheckResponse> {
     Json(HealthCheckResponse {})
   }

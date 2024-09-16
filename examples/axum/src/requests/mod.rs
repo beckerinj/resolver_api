@@ -7,14 +7,18 @@ mod get_num;
 mod get_string;
 mod health_check;
 
-pub struct Response(pub axum::response::Response);
+pub struct Response {
+  pub response: axum::response::Response,
+}
 
 impl<T> From<T> for Response
 where
   T: axum::response::IntoResponse,
 {
   fn from(value: T) -> Self {
-    Response(value.into_response())
+    Response {
+      response: value.into_response(),
+    }
   }
 }
 
