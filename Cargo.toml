@@ -19,5 +19,8 @@ repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
+[patch.crates-io]
 resolver_api_derive = { path = "derive" }
+
+[dependencies]
+resolver_api_derive = "2.0.0"
