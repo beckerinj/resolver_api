@@ -9,14 +9,14 @@ mod requests;
 
 pub struct State {
   pub num: u16,
-  pub string: String,
+  pub json_string: String,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
   let state = State {
     num: 43,
-    string: String::from("rando"),
+    json_string: String::from("{\"is_json\":true}"),
   };
 
   let app = Router::new()
