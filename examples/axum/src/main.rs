@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Context;
-use axum::{routing::post, Extension, Json, Router};
+use axum::{response::IntoResponse, routing::post, Extension, Json, Router};
 use requests::Request;
 use resolver_api::Resolve;
 
@@ -24,7 +24,10 @@ async fn main() -> anyhow::Result<()> {
       "/",
       post(
         |state: Extension<Arc<State>>, Json(req): Json<Request>| async move {
-          req.resolve(&state).await.response
+          match req.resolve(&state).await {
+            Ok(res) => res.response,
+            Err(err) => err.into_response(),
+          }
         },
       ),
     )

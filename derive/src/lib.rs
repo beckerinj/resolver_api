@@ -2,7 +2,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, spanned::Spanned, Attribute, Data, DeriveInput, Type};
 
-#[proc_macro_derive(Resolve, attributes(response, args))]
+#[proc_macro_derive(Resolve, attributes(response, error, args))]
 pub fn derive_resolve(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
   let input = parse_macro_input!(input as DeriveInput);
   match impl_derive_resolve(input) {
@@ -20,10 +20,20 @@ fn impl_derive_resolve(input: DeriveInput) -> Result<TokenStream, syn::Error> {
     .ok_or_else(|| syn::Error::new(input.span(), "did not find `#[response]` attribute"))?;
   let response_type: Type = response_type.parse_args()?;
 
+  let error_type = input
+    .attrs
+    .iter()
+    .find(|attr| attr.path().is_ident("error"));
+  let error_type = error_type
+    .map(|t| t.parse_args::<Type>())
+    .transpose()?
+    .unwrap_or_else(|| syn::parse_quote! { ::core::convert::Infallible });
+
   let ident = &input.ident;
   let mut res = quote! {
     impl resolver_api::HasResponse for #ident {
       type Response = #response_type;
+      type Error = #error_type;
 
       fn req_type() -> &'static str {
         stringify!(#ident)
@@ -59,10 +69,13 @@ fn impl_derive_resolve(input: DeriveInput) -> Result<TokenStream, syn::Error> {
 
       let enum_res = quote! {
         impl ::resolver_api::Resolve<#args_type> for #ident {
-          async fn resolve(self, args: &#args_type) -> Self::Response {
+          async fn resolve(self, args: &#args_type) -> Result<Self::Response, Self::Error> {
             match self {
               #(#ident::#variants(request) => {
-                ::core::convert::From::from(::resolver_api::Resolve::resolve(request, args).await)
+                match ::resolver_api::Resolve::resolve(request, args).await {
+                  Ok(t) => Ok(::core::convert::From::from(t)),
+                  Err(e) => Err(::core::convert::From::from(e)),
+                }
               },)*
             }
           }
