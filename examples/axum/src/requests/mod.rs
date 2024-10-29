@@ -1,3 +1,4 @@
+use axum::http::StatusCode;
 use resolver_api::Resolve;
 use serde::Deserialize;
 
@@ -24,6 +25,7 @@ where
 
 #[derive(Deserialize, Resolve)]
 #[response(Response)]
+#[error(StatusCode)]
 #[args(State)]
 pub enum Request {
   HealthCheck(health_check::HealthCheck),
