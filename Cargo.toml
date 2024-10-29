@@ -23,4 +23,4 @@ repository.workspace = true
 resolver_api_derive = { path = "derive" }
 
 [dependencies]
-resolver_api_derive = "2.0.0"
+resolver_api_derive = "3.0.0"
