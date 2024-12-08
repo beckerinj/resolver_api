@@ -5,12 +5,15 @@ Declare your API in the Rust type system.
 ## Declare API
 
 ```rust
+/// User entity
+#[derive(Serialize, Deserialize)]
 pub struct User {
   pub id: i64,
   pub username: String,
 }
 
-#[derive(Deserialize, Debug, Resolve)]
+/// Get User request 
+#[derive(Serialize, Deserialize, Debug, Resolve)]
 #[response(User)]
 pub struct GetUser {
   pub id: i64,
